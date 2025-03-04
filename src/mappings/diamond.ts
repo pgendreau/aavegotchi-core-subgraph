@@ -39,6 +39,7 @@ import {
   GotchiLendingCancel,
   WhitelistCreated,
   WhitelistUpdated,
+  WearablesConfigCreated,
   ERC1155ExecutedToRecipient,
   ERC721ExecutedToRecipient,
   GotchiLendingEnded,
@@ -110,7 +111,7 @@ import {
 } from "../utils/constants";
 import { Address, BigInt, log, Bytes } from "@graphprotocol/graph-ts";
 
-import { /*Parcel,*/ Parcel, TokenCommitment } from "../../generated/schema";
+import { /*Parcel,*/ Parcel, TokenCommitment, WearablesConfig } from "../../generated/schema";
 // import {
 //   RealmDiamond,
 //   MintParcel,
@@ -1089,6 +1090,44 @@ export function handleMintParcel(event: MintParcel): void {
   );
   parcel.save();
 }
+
+// wearables config
+export function handleWearablesConfigCreated(event: WearablesConfigCreated): void {
+  let contract = AavegotchiDiamond.bind(event.address);
+  let owner = getOrCreateUser(event.params.owner.toHexString());
+  let ownerAddress = Address.fromString(event.params.owner.toHexString());
+  let tokenId = event.params.tokenId;
+  let wearablesConfigId = event.params.wearablesConfigId;
+  let wearables = event.params.wearables;
+
+  let response = contract.try_getWearablesConfigName(ownerAddress, tokenId, wearablesConfigId);
+
+  if (response.reverted) {
+    return "";
+  }
+
+  let name = response.value;
+
+  let id = ownerAddress.toString().concat("-").concat(tokenId.toString()).concat("-").concat(wearablesConfigId.toString());
+
+  let wearablesConfig = WearablesConfig.load(id);
+  if (!wearablesConfig) {
+    wearablesConfig = new WearablesConfig(id);
+    wearablesConfig.name = name;
+    wearablesConfig.wearables = wearables;
+    wearablesConfig.gotchiTokenId = tokenId;
+    wearablesConfig.owner = owner.id;
+    wearablesConfig.ownerAddress = ownerAddress;
+  }
+}
+
+//export function handleWearablesConfigCreated(event: WearablesConfigCreated): void {
+//  createOrUpdateWearablesConfig(event.params.wearablesConfigId, event);
+//}
+//
+//export function handleWearablesConfigUpdated(event: WearablesConfigUpdated): void {
+//  createOrUpdateWearablesConfig(event.params.wearablesConfigId, event);
+//}
 
 // Whitelist
 export function handleWhitelistCreated(event: WhitelistCreated): void {
